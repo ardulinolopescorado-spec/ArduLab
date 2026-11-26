@@ -4305,7 +4305,8 @@ const AIP={
 };
 const AIK='forcalab_ai';
 let AIC=(()=>{try{return JSON.parse(localStorage.getItem(AIK)||'null')}catch(e){return null}})()||{p:null,keys:{},models:{},base:{}};
-const aiSave=()=>{try{localStorage.setItem(AIK,JSON.stringify(AIC))}catch(e){}};
+const aiSave=()=>{AIC.upd=Date.now();try{localStorage.setItem(AIK,JSON.stringify(AIC))}catch(e){}if(typeof gdQueue==='function')try{gdQueue()}catch(e){}};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 const inClaude=()=>!!(window.claude&&window.claude.use);
 function aiProv(){return AIC.p||(inClaude()?'claude':'gemini')}
 function aiReady(){const p=aiProv();if(p==='claude')return !!ASK.sample;if(p==='custom')return !!(AIC.base.custom&&AIC.models.custom);return !!AIC.keys[p]&&(p==='openrouter'||p==='gemini'||!!AIC.models[p])}
@@ -4394,16 +4395,18 @@ function aiSettings(){const box=$('#askMsgs'),p=aiProv();ASK.cfg=true;
  <label class="field" style="margin-top:6px">Modelo<input id="aiModel" list="aiML" value="${esc(AIC.models[p]||'')}" placeholder="${P.def||'escolha em Buscar modelos'}"><datalist id="aiML"></datalist></label>
  <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="chip" id="aiList">Buscar modelos</button><button class="chip" id="aiTest">Testar</button><button class="chip" id="aiDel" style="color:var(--bad)">Apagar chave</button></div>
  <p class="small mute" id="aiMsg" style="margin:6px 0 0"></p>
- <p class="note" style="margin:8px 0 0">🔒 A chave fica só neste aparelho (no navegador). Ela não vai para backups, nuvem nem para o link. Não use em celular de outra pessoa sem apagar depois.</p>`}
+ <p class="note" style="margin:8px 0 0">💾 A chave fica <b>salva neste aparelho</b>: você só cola uma vez. Ela não vai para backups exportados nem para o link.</p>
+ <label class="row" style="gap:8px;margin-top:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="aiDrive" ${AIC.drive!==false?'checked':''} style="width:20px;height:20px;margin-top:2px"><span class="small"><b>Guardar também no meu Google Drive</b> (no arquivo do app, que só a sua conta acessa). Assim, ao reinstalar o app ou usar outro celular, a chave volta sozinha quando o Drive sincronizar.</span></label>`}
  ${inClaude()&&p!=='claude'?`<p class="small" style="color:var(--warn);margin:8px 0 0">Atenção: aberto dentro do claude.ai, o navegador bloqueia acesso a outras IAs. Para usar ${P.n}, abra o arquivo do app ou o site no navegador do celular.</p>`:''}
  <button class="btn w" id="aiOk" style="margin-top:10px">Salvar e voltar à conversa</button></div>`;
 ASK.applyCfg=()=>{rd();ASK.cfg=false;askHead()};
- const rd=()=>{AIC.noTools={};const k=$('#aiKey'),m=$('#aiModel'),b=$('#aiBase');if(k)AIC.keys[p]=k.value.trim();if(m)AIC.models[p]=m.value.trim();if(b)AIC.base.custom=b.value.trim();aiSave()};
+ const rd=()=>{AIC.noTools={};const dv=$('#aiDrive');if(dv)AIC.drive=dv.checked;const k=$('#aiKey'),m=$('#aiModel'),b=$('#aiBase');if(k)AIC.keys[p]=k.value.trim();if(m)AIC.models[p]=m.value.trim();if(b)AIC.base.custom=b.value.trim();aiSave()};
  $('#aiP').onchange=e=>{rd();AIC.p=e.target.value;aiSave();aiSettings();askHead()};
  const msg=t=>{const e=$('#aiMsg');if(e)e.textContent=t};
  if($('#aiLogin'))$('#aiLogin').onclick=()=>{rd();orLogin()};
  if($('#aiList'))$('#aiList').onclick=async()=>{rd();msg('Buscando…');try{const L=await aiModels(p);$('#aiML').innerHTML=L.slice(0,400).map(x=>`<option value="${esc(x)}">`).join('');msg(L.length+' modelos encontrados: toque no campo Modelo para escolher.')}catch(e){msg('Erro: '+e.message)}};
  if($('#aiTest'))$('#aiTest').onclick=async()=>{rd();msg('Testando…');const go=()=>aiChat(p,'Responda só: ok',[{role:'user',content:'teste'}]);try{let r;try{r=await go()}catch(e){if(await aiFixModel(p,e)){$('#aiModel').value=aiModel(p);r=await go()}else throw e}msg('✓ Funcionou com '+aiModel(p)+': '+String(r).slice(0,60))}catch(e){msg('Erro: '+e.message)}};
+ if($('#aiDrive'))$('#aiDrive').onchange=()=>{rd();toast($('#aiDrive').checked?'A chave vai junto para o seu Drive':'A chave fica só neste aparelho')};
  if($('#aiDel'))$('#aiDel').onclick=()=>{delete AIC.keys[p];aiSave();aiSettings();toast('Chave apagada deste aparelho')};
  $('#aiOk').onclick=()=>{ASK.applyCfg();askRender()};
 }
@@ -4417,8 +4420,10 @@ function gdLoadLib(){return new Promise((ok,no)=>{if(window.google&&google.accou
 async function gdToken(interactive){if(GD.tok&&Date.now()<GD.exp-60e3)return GD.tok;if(!GD.cid)throw new Error('Falta o Client ID do Google');await gdLoadLib();
  return new Promise((ok,no)=>{const tc=google.accounts.oauth2.initTokenClient({client_id:GD.cid,scope:'https://www.googleapis.com/auth/drive.file',callback:r=>{if(r.error)return no(new Error(r.error));GD.tok=r.access_token;GD.exp=Date.now()+(r.expires_in||3600)*1000;ok(GD.tok)},error_callback:e=>no(new Error(e&&e.type||'login cancelado'))});tc.requestAccessToken({prompt:interactive?'consent':''})})}
 async function gdApi(url,opt={}){const t=await gdToken(false);opt.headers=Object.assign({Authorization:'Bearer '+t},opt.headers||{});const r=await fetch(url,opt);if(r.status===401){GD.tok=null;throw new Error('Login do Google expirou: toque em Sincronizar')}if(!r.ok)throw new Error('Drive '+r.status+': '+(await r.text()).slice(0,140));return r}
-function gdPayload(){const tr={};Object.keys(S.tr).forEach(id=>tr[id]=S.tr[id].filter(r=>!r.demo));return {app:'ArduLab',v:VER,at:Date.now(),profiles:S.profiles,tr,sess:S.sess||{},knee:S.knee||{},tomb:S.tomb||[]}}
-function gdMerge(D){let n=0;if(!D||!D.tr)return 0;
+function gdPayload(){const tr={};Object.keys(S.tr).forEach(id=>tr[id]=S.tr[id].filter(r=>!r.demo));return {app:'ArduLab',v:VER,at:Date.now(),profiles:S.profiles,tr,sess:S.sess||{},knee:S.knee||{},tomb:S.tomb||[],...(AIC.drive!==false?{ai:{p:AIC.p,keys:AIC.keys,models:AIC.models,base:AIC.base,upd:AIC.upd||0}}:{})}}
+function gdMerge(D){let n=0;if(D&&D.ai&&AIC.drive!==false){const R=D.ai;
+  if((R.upd||0)>(AIC.upd||0)){AIC.p=R.p||AIC.p;AIC.keys={...AIC.keys,...(R.keys||{})};AIC.models={...AIC.models,...(R.models||{})};AIC.base={...AIC.base,...(R.base||{})};AIC.upd=R.upd||Date.now();try{localStorage.setItem(AIK,JSON.stringify(AIC))}catch(e){};try{askHead()}catch(e){}}}
+ if(!D||!D.tr)return 0;
  const tomb=new Set([...(S.tomb||[]),...(D.tomb||[])]);S.tomb=[...tomb];
  (D.profiles||[]).forEach(p=>{const i=S.profiles.findIndex(x=>x.id===p.id);if(i<0){S.profiles.push(p);n++}else if((p.upd||0)>(S.profiles[i].upd||0)){S.profiles[i]=p;n++}});
 if(D.freq){S.freq=S.freq||{};Object.keys(D.freq).forEach(k=>{if(!S.freq[k]||(D.freq[k].upd||0)>(S.freq[k].upd||0)){S.freq[k]=D.freq[k];n++}})}

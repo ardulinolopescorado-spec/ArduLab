@@ -4310,7 +4310,7 @@ const inClaude=()=>!!(window.claude&&window.claude.use);
 function aiProv(){return AIC.p||(inClaude()?'claude':'gemini')}
 function aiReady(){const p=aiProv();if(p==='claude')return !!ASK.sample;if(p==='custom')return !!(AIC.base.custom&&AIC.models.custom);return !!AIC.keys[p]&&(p==='openrouter'||p==='gemini'||!!AIC.models[p])}
 function aiModel(p){return AIC.models[p]||AIP[p].def}
-async function aiFetchJSON(url,opt){let r;try{r=await fetch(url,opt)}catch(e){const er=new Error(inClaude()?'Dentro do claude.ai o app não pode acessar outros sites (regra de segurança). Para usar outra IA, abra o app como arquivo ou site no navegador.':'Sem conexão com o serviço (internet, endereço ou bloqueio do navegador).');er.code='network';throw er}
+async function aiFetchJSON(url,opt){let r;const ac=new AbortController(),to=setTimeout(()=>ac.abort(),60000);try{r=await fetch(url,{...(opt||{}),signal:ac.signal})}catch(e){clearTimeout(to);if(e&&e.name==='AbortError'){const er=new Error('O serviço demorou demais para responder (mais de 1 minuto). Tente de novo ou troque o modelo.');er.code='timeout';throw er}const er=new Error(inClaude()?'Dentro do claude.ai o app não pode acessar outros sites (regra de segurança). Para usar outra IA, abra o app como arquivo ou site no navegador.':'Sem conexão com o serviço (internet, endereço ou bloqueio do navegador).');er.code='network';throw er}clearTimeout(to);
  const t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}
  if(!r.ok){const m=j&&(j.error&&(j.error.message||j.error)||j.message)||t.slice(0,200);const er=new Error(`${r.status}: ${typeof m==='string'?m:JSON.stringify(m)}`);er.code=r.status===401||r.status===403?'auth':r.status===429?'rate_limited':'http';throw er}
  return j}
@@ -4397,6 +4397,7 @@ function aiSettings(){const box=$('#askMsgs'),p=aiProv();ASK.cfg=true;
  <p class="note" style="margin:8px 0 0">🔒 A chave fica só neste aparelho (no navegador). Ela não vai para backups, nuvem nem para o link. Não use em celular de outra pessoa sem apagar depois.</p>`}
  ${inClaude()&&p!=='claude'?`<p class="small" style="color:var(--warn);margin:8px 0 0">Atenção: aberto dentro do claude.ai, o navegador bloqueia acesso a outras IAs. Para usar ${P.n}, abra o arquivo do app ou o site no navegador do celular.</p>`:''}
  <button class="btn w" id="aiOk" style="margin-top:10px">Salvar e voltar à conversa</button></div>`;
+ASK.applyCfg=()=>{rd();ASK.cfg=false;askHead()};
  const rd=()=>{AIC.noTools={};const k=$('#aiKey'),m=$('#aiModel'),b=$('#aiBase');if(k)AIC.keys[p]=k.value.trim();if(m)AIC.models[p]=m.value.trim();if(b)AIC.base.custom=b.value.trim();aiSave()};
  $('#aiP').onchange=e=>{rd();AIC.p=e.target.value;aiSave();aiSettings();askHead()};
  const msg=t=>{const e=$('#aiMsg');if(e)e.textContent=t};
@@ -4404,7 +4405,7 @@ function aiSettings(){const box=$('#askMsgs'),p=aiProv();ASK.cfg=true;
  if($('#aiList'))$('#aiList').onclick=async()=>{rd();msg('Buscando…');try{const L=await aiModels(p);$('#aiML').innerHTML=L.slice(0,400).map(x=>`<option value="${esc(x)}">`).join('');msg(L.length+' modelos encontrados: toque no campo Modelo para escolher.')}catch(e){msg('Erro: '+e.message)}};
  if($('#aiTest'))$('#aiTest').onclick=async()=>{rd();msg('Testando…');const go=()=>aiChat(p,'Responda só: ok',[{role:'user',content:'teste'}]);try{let r;try{r=await go()}catch(e){if(await aiFixModel(p,e)){$('#aiModel').value=aiModel(p);r=await go()}else throw e}msg('✓ Funcionou com '+aiModel(p)+': '+String(r).slice(0,60))}catch(e){msg('Erro: '+e.message)}};
  if($('#aiDel'))$('#aiDel').onclick=()=>{delete AIC.keys[p];aiSave();aiSettings();toast('Chave apagada deste aparelho')};
- $('#aiOk').onclick=()=>{rd();ASK.cfg=false;askHead();askRender()};
+ $('#aiOk').onclick=()=>{ASK.applyCfg();askRender()};
 }
 /* ---------- SINCRONIA PELO GOOGLE DRIVE (versão arquivo/site) ---------- */
 const GD={cid:null,tok:null,exp:0,fid:null,st:'off',at:0,busy:false,t:null,err:'',lib:false};
@@ -4460,6 +4461,8 @@ function askHead(){const p=aiProv(),h=$('#askTitle');if(h)h.textContent='Pergunt
 
 const ASK={msgs:[],busy:false,spk:false,sample:null,dict:null,rec:null};
 function askContext(){
+ try{return askContext0()}catch(e){return '(não consegui ler a tela: '+String(e.message||e).slice(0,80)+')'}}
+function askContext0(){
  const p=realProf(),w=postOpWeek();let scr='';
  const sh=$('#sheet').classList.contains('on')?$('#sheetPn'):null;
  if(sh)scr='[Painel aberto]\n'+sh.innerText;else if(LV)scr='[Teste ao vivo]\n'+LV.el.innerText;else scr='[Tela: '+(location.hash||'#inicio')+']\n'+$('#view').innerText;
@@ -4491,14 +4494,21 @@ function askRender(){if(ASK.cfg)return;const box=$('#askMsgs');box.innerHTML='';
  if(!ASK.msgs.length){box.innerHTML=`<div class="m a">Oi! Pergunte qualquer coisa sobre o que está na tela ou sobre os seus dados. Exemplos:</div><div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0">${['Explique esta tela pra mim','Esse resultado foi bom ou ruim?','O que eu devo treinar primeiro?','Como está minha simetria do joelho?'].map(q=>`<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;box.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>askSend(b.dataset.q));return}
  ASK.msgs.forEach(m=>{const d=document.createElement('div');d.className='m '+(m.role==='user'?'u':'a');if(m.role==='user')d.textContent=m.content;else d.innerHTML=esc(m.content||'…').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');box.appendChild(d)});box.scrollTop=box.scrollHeight}
 async function askSend(q){
- q=(q||'').trim();if(!q||ASK.busy)return;$('#askIn').value='';
+ q=(q||'').trim();if(!q)return;
+ if(ASK.busy&&Date.now()-(ASK.t0||0)<90000){toast('Ainda respondendo a pergunta anterior…');return}
+ if(ASK.cfg){try{ASK.applyCfg&&ASK.applyCfg()}catch(e){ASK.cfg=false}}
+ $('#askIn').value='';ASK.busy=true;ASK.t0=Date.now();askBtn();
+ try{await askSend0(q)}catch(e){try{console.warn('ask',e)}catch(_){}const last=ASK.msgs[ASK.msgs.length-1];const t='Não consegui responder agora. Tente de novo.\n(detalhe: '+String(e&&(e.message||e.code)||e).slice(0,200)+')';if(last&&last.role==='assistant')last.content=t;else ASK.msgs.push({role:'assistant',content:t})}
+ finally{ASK.busy=false;askBtn();askRender()}}
+function askBtn(){const b=$('#askGo');if(!b)return;b.disabled=false;b.style.opacity=ASK.busy?.5:1}
+async function askSend0(q){
  const prov=aiProv();
  if(prov==='claude'&&!ASK.sample||prov!=='claude'&&!aiReady()){ASK.msgs.push({role:'user',content:q},{role:'assistant',content:prov==='claude'?'Neste aparelho o Claude não está disponível (o app não foi aberto pelo claude.ai). Toque em ⚙️ e escolha outra IA: o Gemini tem chave grátis, e o OpenRouter dá acesso a vários modelos.':'Falta configurar '+AIP[prov].n+'. Toque em ⚙️ e cole a chave (e o modelo).'});askRender();return}
- if(prov!=='claude'){ASK.msgs.push({role:'user',content:q});const a2={role:'assistant',content:'…'};ASK.msgs.push(a2);ASK.busy=true;askRender();
+ if(prov!=='claude'){ASK.msgs.push({role:'user',content:q});const a2={role:'assistant',content:'…'};ASK.msgs.push(a2);askRender();
   const conv=ASK.msgs.slice(0,-1).slice(-10).map((m,i,arr)=>({role:m.role,content:i===arr.length-1?`### Contexto do app agora\n${askContext()}\n\n### Pergunta\n${m.content}`:m.content}));
   try{a2.content=await aiAsk(ASK_SYS,conv,t=>{a2.content='🔎 '+t+'…';askRender()});if(ASK.spk)say(a2.content.replace(/\*\*/g,'').slice(0,600))}catch(e){a2.content=(e.code==='auth'?'A chave foi recusada. Confira em ⚙️.':e.code==='rate_limited'?'Limite de uso atingido nesse serviço. Espere um pouco ou troque o modelo.':'Não consegui responder.')+'\n(detalhe: '+String(e.message||e).slice(0,200)+')'}
-  ASK.busy=false;askRender();return}
- ASK.msgs.push({role:'user',content:q});const a={role:'assistant',content:''};ASK.msgs.push(a);ASK.busy=true;askRender();
+  return}
+ ASK.msgs.push({role:'user',content:q});const a={role:'assistant',content:''};ASK.msgs.push(a);askRender();
  const conv=ASK.msgs.slice(0,-1).slice(-10).map((m,i,arr)=>({role:m.role,content:i===arr.length-1?`${ASK_SYS}\n\n### Contexto do app agora\n${askContext()}\n\n### Pergunta\n${m.content}`:m.content}));
  let r=null,err=null;
  try{r=await ASK.sample(conv,{cache:false,tools:ASK_TOOLS,onText:({text})=>{a.content=text;askRender()}})}catch(e){err=e}
@@ -4506,7 +4516,6 @@ async function askSend(q){
   try{a.content='';askRender();const conv2=conv.map((m,i)=>i===conv.length-1?{...m,content:m.content+'\n\n### Conhecimento do app (use isto em vez de ferramentas)\n'+askKB()}:m);r=await ASK.sample(conv2,{cache:false,onText:({text})=>{a.content=text;askRender()}});err=null}catch(e2){err=e2}}
  try{if(err)throw err;a.content=r.text||a.content;if(ASK.spk)say(a.content.replace(/\*\*/g,'').slice(0,600))}
  catch(e){a.content=e&&e.code==='rate_limited'?'Muitas perguntas seguidas. Espere um pouco e tente de novo.':e&&e.code==='not_granted'?'Você não autorizou o assistente nesta página.':'Não consegui responder agora. Tente de novo.'+(e&&(e.text||e.message||e.code)?'\n(detalhe: '+String(e.code||'')+' '+String(e.text||e.message||'').slice(0,160)+')':'');try{console.warn('ask',e)}catch(_){}}
- ASK.busy=false;askRender();
 }
 function askKB(){const h=location.hash,id=LV&&LV.t&&LV.t.id&&T[LV.t.id]?LV.t.id:(h.match(/^#t-(\w+)/)||[])[1];let o=Object.entries(KTOP).map(([k,v])=>`[${k}] ${v}`).join('\n');
  if(LV&&LV.imu)o+=`\n[teste atual] ${IMUT[LV.id].n}: ${IMUT[LV.id].o}`;

@@ -4541,6 +4541,8 @@ $('#askSpk').onclick=()=>{ASK.spk=!ASK.spk;$('#askSpk').textContent=ASK.spk?'�
 })();
 
 orCallback().finally(()=>{askHead()});
+/* aviso quando o app se atualizou sozinho */
+const APPV='2026-11-26.3';try{const pv=localStorage.getItem('ardulab_v');if(pv&&pv!==APPV)setTimeout(()=>toast('✓ ArduLab atualizado para a versão mais nova'),1200);localStorage.setItem('ardulab_v',APPV)}catch(e){}
 {const f=document.createElement('button');f.id='gdFab';f.className='chip';f.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));z-index:85;background:#2fa3ff;color:#fff;border:0;box-shadow:0 8px 20px -8px rgba(0,0,0,.5);display:none';f.textContent='☁️ Toque para sincronizar com o Drive';f.onclick=()=>gdSync(false);document.body.appendChild(f)}
 if(GD.on&&gdCan()){GD.st='precisa';gdPaint()}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&GD.on&&GD.tok&&Date.now()<GD.exp-60e3){clearTimeout(GD.t);gdSync(false)}});

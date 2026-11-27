@@ -51,7 +51,7 @@ h3{font-size:19px;margin:0;font-weight:600}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
 .row{display:flex;align-items:center;gap:10px}.row.sb{justify-content:space-between}
 .mute{color:var(--mute)}.small{font-size:13px}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);background:var(--card);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom))}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--card);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom))}
 .tabs button{border:0;background:none;display:grid;justify-items:center;gap:2px;font-size:13px;color:var(--mute);min-height:56px;border-radius:12px}
 .tabs button svg{width:56px;height:30px;padding:3px 16px;box-sizing:border-box;border-radius:15px;transition:background .25s,color .25s}
 .tabs button.on{color:var(--acc)}
@@ -3262,17 +3262,30 @@ function jCtx(){const p=prof();let st={k:'none'};try{st=lcaStage()}catch(e){}
  let rel=null;try{const l=hist('kext',goodSide()).slice(-1)[0];const lev=lever(T.kext,p);if(l&&lev&&p.peso)rel=l.m.pk*9.81*lev/p.peso}catch(e){}
  let rd=null;try{rd=METRICS.ready.f()}catch(e){}
  const R=jRecDays();const hd=Math.max(3,Math.min(5,R.d+1));return {p,st,restr,rel,strong:rel!=null&&rel>=2.5,rd,R,hd}}
-const JX=c=>c.restr?{ // versão sem salto, sem pivô e sem impacto (LCA ainda não liberado)
- forte:[['legpress','3 × 5 pesado (sobrando 2–3 repetições)'],['ponteisq','3 × 8'],['rdl','3 × 6'],['isomax','3 × 3 s máximo, 1 min de pausa']],
- pot:[['pulsos','5 × 3 pulsos, 1 min de pausa'],['interbike','6 × 10 s forte, 50 s leve']],
- prime:[['isomax','3 × 3 s máximo, 2 min de pausa'],['pulsos','3 × 3 pulsos'],['interbike','3 × 6 s no máximo, 1 min leve']],
- reac:[['reacard','2 × 10 estímulos'],['regua','10 tentativas']],
- pape:[['isomax','2–3 × 3 s máximo com 1 min de pausa'],['pulsos','2 × 3 pulsos']]}:{
- forte:[['agach','3–4 × 4–5 pesado (sobrando 2 repetições)'],['bulgaro','3 × 6 cada perna'],['rdl','3 × 6'],['nordico','3 × 4']],
- pot:[['cmjex','4 × 3 no máximo, 1–2 min de pausa'],['medball','4 × 3'],['sprints','4 × 15–20 m, 2 min de pausa']],
- prime:[['agsalto','3 × 3 rápidos (carga leve)'],['cmjex','2 × 3 no máximo'],['sprints','2–3 × 10–20 m'],['isomax','2 × 3 s máximo']],
- reac:[['reacbola','2 × 8 estímulos'],['regua','10 tentativas']],
- pape:[['caixa','3 × 2 saltos no máximo (ou 3 × 3 salto vertical)'],['sprints','2 × 10 m acelerando no máximo']]};
+/* cargas e alvos personalizados: 1RM estimado (Epley) a partir da carga que a pessoa informa; alvos do ArduLab a partir do seu pico medido */
+const JCARGA={agach:'Agachamento',legpress:'Leg press',bulgaro:'Afundo búlgaro (carga total)',rdl:'Levantamento terra romeno'};
+function j1rm(id){try{const q=(prof().cargas||{})[id];if(!q||!q.kg||!q.r)return null;return q.kg*(1+Math.min(q.r,12)/30)}catch(e){return null}}
+function jPk(){const o={};['D','E'].forEach(s=>{try{const h=hist('kext',s).slice(-5);if(h.length)o[s]=Math.max(...h.map(r=>r.m.pk))}catch(e){}});return o}
+const r25=x=>Math.max(2.5,Math.round(x/2.5)*2.5),fk=x=>String(Math.round(x)).replace('.',',');
+function jDose(e,vf,c){const sets=e.fix?e.s:Math.max(1,Math.round(e.s*vf));let t=`${sets} × ${e.r}`,cg='';const lowR=c.rd!=null&&c.rd<90,adj=lowR?.92:1;
+ if(e.k==='1rm'){const base=e.from||e.id,R=j1rm(base);const pc=e.pct.map(x=>Math.round(x*100)).join('–');
+  if(R){const lo=r25(R*e.pct[0]*adj),hi=r25(R*e.pct[1]*adj);const fz=x=>String(x).replace('.',',');cg=`${lo===hi?fz(lo):fz(lo)+'–'+fz(hi)} kg (${pc}% do seu máximo estimado de ${fk(R)} kg${lowR?', já 8% menos pela prontidão baixa':''})`}
+  else cg=`${pc}% do seu máximo — informe sua carga em "Suas cargas" para ver em kg`}
+ else if(e.k==='iso'||e.k==='pul'){const P=jPk(),ks=Object.keys(P);if(ks.length){const f=e.k==='iso'?[1,1]:[.7,.8];cg=(e.k==='iso'?'alvo: chegar no seu pico — ':'pulsos até ')+ks.map(s=>`${s==='D'?'direita':'esquerda'} ${f[0]===f[1]?fk(P[s]):fk(P[s]*f[0])+'–'+fk(P[s]*f[1])} kgf`).join(' · ')}else cg='meça a extensão de joelho para ter o alvo em kgf'}
+ return t+(e.p?`, pausa ${e.p}`:'')+(cg?` · ${cg}`:'')+(e.n?` · ${e.n}`:'')}
+const JS=c=>c.restr?{ // versão sem salto, sem pivô e sem impacto (LCA ainda não liberado)
+ forte:[{id:'legpress',s:4,r:'5',k:'1rm',pct:[.78,.83],p:'2–3 min',n:'sobrando 2–3 repetições'},{id:'rdl',s:3,r:'6',k:'1rm',pct:[.70,.75],p:'2 min'},{id:'ponteisq',s:3,r:'8',p:'1 min'},{id:'isomax',s:3,r:'3 s',k:'iso',p:'1 min'}],
+ pot:[{id:'pulsos',s:5,r:'3 pulsos',k:'pul',p:'1 min'},{id:'interbike',s:6,r:'10 s forte + 50 s leve'}],
+ prime:[{id:'isomax',s:3,r:'3 s',k:'iso',p:'2 min',fix:1},{id:'legpress',s:2,r:'3 rápidas',k:'1rm',pct:[.70,.75],p:'2–3 min',fix:1},{id:'pulsos',s:3,r:'3 pulsos',k:'pul',p:'1 min',fix:1},{id:'interbike',s:3,r:'6 s no máximo + 1 min leve',fix:1}],
+ reac:[{id:'reacard',s:2,r:'10 estímulos',fix:1},{id:'regua',s:1,r:'10 tentativas',fix:1}],
+ pape:[{id:'isomax',s:3,r:'3 s',k:'iso',p:'1 min',fix:1},{id:'pulsos',s:2,r:'3 pulsos',k:'pul',p:'1 min',fix:1}]}:{
+ forte:[{id:'agach',s:4,r:'4–5',k:'1rm',pct:[.80,.85],p:'3 min',n:'sobrando 2 repetições'},{id:'bulgaro',s:3,r:'6 cada perna',k:'1rm',pct:[.72,.77],p:'2 min'},{id:'rdl',s:3,r:'6',k:'1rm',pct:[.70,.75],p:'2 min'},{id:'nordico',s:3,r:'4',p:'2 min'}],
+ pot:[{id:'cmjex',s:4,r:'3 no máximo',p:'1–2 min'},{id:'agsalto',s:4,r:'3 rápidos',k:'1rm',from:'agach',pct:[.30,.40],p:'2 min'},{id:'sprints',s:4,r:'15–20 m',p:'2 min'},{id:'medball',s:4,r:'3',p:'1 min',n:'bola de 3–5 kg'}],
+ prime:[{id:'agsalto',s:3,r:'3 rápidos',k:'1rm',from:'agach',pct:[.30,.40],p:'2–3 min',fix:1},{id:'cmjex',s:2,r:'3 no máximo',p:'2 min',fix:1},{id:'sprints',s:3,r:'10–20 m',p:'2 min',fix:1}],
+ reac:[{id:'reacbola',s:2,r:'8 estímulos',fix:1},{id:'regua',s:1,r:'10 tentativas',fix:1}],
+ pape:[{id:'caixa',s:3,r:'2 saltos no máximo',p:'1–2 min',fix:1},{id:'sprints',s:2,r:'10 m acelerando no máximo',p:'1 min',fix:1}]};
+function JX(c,vf=1){const S2=JS(c);if(c.strong&&!c.restr)S2.prime.splice(1,0,{id:'agach',s:2,r:'2–3',k:'1rm',pct:[.80,.85],p:'3 min',fix:1,n:'rápido na subida'});
+ const o={};Object.keys(S2).forEach(k=>o[k]=S2[k].map(e=>[e.id,jDose(e,vf,c)]));return o}
 function jEx(list){return `<div class="list" style="margin-top:6px">${list.map(([id,d])=>{const E=EXLIB[id];return E?`<button class="li" data-exid="${id}" data-dose="${esc(d)}" style="grid-template-columns:1fr auto"><span><span class="t">${esc(E.n)}</span><br><span class="s">${esc(d)}</span></span><span class="r" style="color:var(--acc)">como fazer ›</span></button>`:''}).join('')}</div>`}
 function jDay(off,ev,c){ // off = dias que faltam (0 = dia do evento, negativo = depois)
  const X=JX(c),big=ev.imp==='alta',hr=new Date(ev.d).getHours(),hd=c.hd,primeDia=hr>=14?0:1;
@@ -3281,9 +3294,9 @@ function jDay(off,ev,c){ // off = dias que faltam (0 = dia do evento, negativo =
  if(off===0)return P('Dia do evento','var(--good)','—','máximo no evento',`Acorde no horário normal, faça uma refeição completa 3–4 h antes e um lanche leve 1 h antes. ${primeDia===0?`<b>Ativação de manhã</b> (≥ 6 h antes, por volta das ${String(Math.max(7,hr-7)).padStart(2,'0')}h): só os exercícios abaixo, poucas repetições, pausa longa, sem cansar.`:''} Faça 1 tentativa de força no ArduLab de manhã para ver sua prontidão. O aquecimento com potencialização está logo abaixo.`,primeDia===0?X.prime:[],'teste');
  if(off===primeDia&&off>0)return P('Ativação (priming)','var(--good)','~20% do normal','alto, mas sem cansar',`Sessão curta de ${big?'15–20':'15'} min entre 6 e 33 h antes do evento: poucas repetições, cada uma no máximo de velocidade, 2–3 min de pausa. A ideia é deixar o sistema nervoso "aceso", não treinar. Termine se sentindo melhor do que começou. Durma 8–9 h hoje.`,X.prime,'teste');
  if(off===1||off===2)return P(off===2?'Leve':'Leve e descanso','var(--acc)','30–40% do normal','leve (4 de 10)',off===2?`Nada de força pesada nem de séries até cansar: só técnica e velocidade em pouca quantidade. ${c.restr?'Bicicleta leve e mobilidade.':'Arremessos parados, passes, movimentação sem contato.'}`:`Dia de descanso ou só mobilidade 10–15 min. Separe roupa e equipamento, hidrate-se e durma 8–9 h.`,off===2?X.reac:[]);
- if(off===hd)return P('Último treino de força','var(--warn)',big?'50–60% das séries':'60–70% das séries','alto (7–8 de 10)',`Último treino pesado antes do evento: mesma carga de sempre, mas metade das séries, sem chegar à falha. Fica ${hd} dias antes porque ${c.R.own?`pelos seus dados sua força leva cerca de ${c.R.d} dia${c.R.d>1?'s':''} para voltar ao normal depois de uma queda`:'a força e o salto podem levar até 72 h para voltar depois de treino pesado'}.`,X.forte.slice(0,3).concat(X.pot.slice(0,1)));
- if(off<hd)return P('Rápido e curto','var(--acc)','40–50% do normal','moderado-alto, pouco volume',`Só potência e reação em poucas séries curtas, longe da falha. O objetivo é manter a "faísca" sem gerar cansaço.`,X.pot.slice(0,2).concat(X.reac.slice(0,1)));
- if(big&&off<=7)return P('Polimento (taper)','var(--warn)',off>=6?'60–70% do normal':'50–60% do normal','mantido (carga de sempre)',`Corte o número de séries e o tempo de treino, mas NÃO diminua a carga nem a frequência: é isso que preserva a força e tira o cansaço acumulado. Nenhuma série até a falha.`,X.forte.slice(0,2).concat(X.pot.slice(0,2)));
+ if(off===hd){const X=JX(c,big?.55:.65);return P('Último treino de força','var(--warn)',big?'50–60% das séries':'60–70% das séries','alto (7–8 de 10)',`Último treino pesado antes do evento: mesma carga de sempre, mas metade das séries, sem chegar à falha. Fica ${hd} dias antes porque ${c.R.own?`pelos seus dados sua força leva cerca de ${c.R.d} dia${c.R.d>1?'s':''} para voltar ao normal depois de uma queda`:'a força e o salto podem levar até 72 h para voltar depois de treino pesado'}.`,X.forte.slice(0,3).concat(X.pot.slice(0,1)))}
+ if(off<hd){const X=JX(c,.45);return P('Rápido e curto','var(--acc)','40–50% do normal','moderado-alto, pouco volume',`Só potência e reação em poucas séries curtas, longe da falha. O objetivo é manter a "faísca" sem gerar cansaço.`,X.pot.slice(0,2).concat(X.reac.slice(0,1)))}
+ if(big&&off<=7){const X=JX(c,off>=6?.65:.55);return P('Polimento (taper)','var(--warn)',off>=6?'60–70% do normal':'50–60% do normal','mantido (carga de sempre)',`Corte o número de séries e o tempo de treino, mas NÃO diminua a carga nem a frequência: é isso que preserva a força e tira o cansaço acumulado. Nenhuma série até a falha.`,X.forte.slice(0,2).concat(X.pot.slice(0,2)))}
  if(big)return P('Bloco forte','var(--bad)','100% (normal)','alto (7–8 de 10)',`Treino normal e forte: é aqui que se constrói o que vai aparecer no dia. Alterne dias de força e de potência e deixe 48 h entre treinos pesados de perna.`,off%2?X.forte:X.pot);
  return P('Treino normal','var(--line)','100% (normal)','normal','Siga seu treino normal.',[])}
 function jWarm(c,ev){const X=JX(c),bas=ev.tipo==='bas';const lowR=c.rd!=null&&c.rd<90;
@@ -3321,6 +3334,10 @@ function viewJogo(v){const c=jCtx(),ev=jNext(),now=new Date();
   ${left>0&&left<c.hd&&big?`<div class="small" style="padding:8px 10px;border-radius:10px;background:var(--card2);border-left:3px solid var(--warn);margin:8px 0">Falta pouco para um polimento completo (o ideal é marcar com 1–2 semanas). Daqui até lá: nada pesado, só ativação e descanso.</div>`:''}
   <h4 style="margin:10px 0 2px">Como o plano foi ajustado para você</h4>${per}
   <button class="btn ghost w" data-start="kext|max|${goodSide()}" style="margin-top:10px">Medir prontidão agora (1 tentativa, 30 s)</button></section>`;
+  const cl=Object.keys(JCARGA).filter(k=>c.restr?k==='legpress'||k==='rdl':k!=='legpress'),cg=c.p.cargas||{};
+  html+=`<section class="card" data-nofold><h2 style="margin:0 0 4px">Suas cargas</h2><p class="small mute" style="margin:0 0 8px">Coloque um peso que você levanta bem feito e quantas repetições consegue com ele (até quase não sair mais, no máximo 12). O app estima o seu máximo e calcula os quilos de cada dia. Os alvos dos exercícios no ArduLab vêm do seu pico medido.</p>
+  <div style="display:grid;gap:8px">${cl.map(k=>`<div class="row" style="gap:6px;align-items:center"><span class="small" style="flex:1">${JCARGA[k]}${j1rm(k)?`<br><span class="mute">máximo estimado ${fk(j1rm(k))} kg</span>`:''}</span><input type="number" inputmode="decimal" min="0" step="2.5" placeholder="kg" data-cgk="${k}" value="${cg[k]?cg[k].kg:''}" style="width:74px"><span class="small mute">×</span><input type="number" inputmode="numeric" min="1" max="12" placeholder="rep" data-cgr="${k}" value="${cg[k]?cg[k].r:''}" style="width:60px"></div>`).join('')}
+  <button class="btn ghost w" id="cgSave">Salvar cargas</button></div></section>`;
   const first=Math.max(T0,D0-(big?14:Math.max(c.hd,3)+1)),days=[];
   for(let n=first;n<=D0+2;n++){const off=D0-n,P=jDay(off,ev,c);if(!P)continue;days.push({n,off,P})}
   html+=`<section class="card" data-nofold><h2 style="margin:0 0 4px">Dia a dia</h2><p class="small mute" style="margin:0 0 8px">Volume = quantas séries e quanto tempo, comparado com o seu treino normal. Esforço de 0 a 10. Toque num exercício para ver o passo a passo.</p>
@@ -3338,6 +3355,7 @@ function viewJogo(v){const c=jCtx(),ev=jNext(),now=new Date();
  v.innerHTML=html;
  $('#jgAdd').onclick=()=>{const val=$('#jgD').value;const t=new Date(val).getTime();if(!val||isNaN(t)){toast('Coloque a data e a hora');return}if(t<Date.now()-3*3600e3){toast('Essa data já passou');return}
   jEvents().push({id:'j'+Date.now().toString(36),d:t,tipo:$('#jgT').value,imp:$('#jgI').value});save();toast('Plano montado ✓');viewJogo(v)};
+ const cs=$('#cgSave');if(cs)cs.onclick=()=>{const p=prof();p.cargas=p.cargas||{};v.querySelectorAll('[data-cgk]').forEach(i=>{const k=i.dataset.cgk,kg=parseFloat(String(i.value).replace(',','.')),r=parseInt(v.querySelector(`[data-cgr="${k}"]`).value);if(kg>0&&r>0)p.cargas[k]={kg,r:Math.min(r,12),d:Date.now()};else if(!i.value)delete p.cargas[k]});save();toast('Cargas salvas ✓');viewJogo(v)};
  v.querySelectorAll('[data-jdel]').forEach(b=>b.onclick=()=>{const p=prof();p.jogos=jEvents().filter(e=>e.id!==b.dataset.jdel);save();toast('Evento removido');viewJogo(v)})}
 function viewGoals(v){
  const L=goalsOf(),pid=realProf().id,obj=(S.obj||{})[pid],O=obj?OBJ[obj]:null;

@@ -1,5 +1,5 @@
 /* ArduLab: abre offline e pega a versão nova sempre que houver internet (rede primeiro). */
-const C='ardulab-v8';
+const C='ardulab-v9';
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png']).catch(()=>{})))});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.origin!==location.origin)return;

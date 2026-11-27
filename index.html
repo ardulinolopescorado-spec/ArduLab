@@ -194,6 +194,16 @@ body:has(.sheet.on) #askFab{display:none}
 .askin{color:#fff;background:var(--acc);border:0;font-weight:700;min-height:30px;padding:3px 12px;font-size:13px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:380px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.mgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 12px;padding:4px;border-radius:16px;background:var(--card2)}
+.seg button{border:0;border-radius:12px;background:none;color:var(--mute);padding:8px 6px;text-align:center;cursor:pointer;font:inherit;line-height:1.15}
+.seg button b{display:block;font-size:15px}.seg button small{display:block;font-size:11px;opacity:.8;margin-top:2px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 2px 8px -4px rgba(0,0,0,.5)}.seg button.on b{color:var(--acc)}
+section.fz>*:not(.fzk):not(.fzh){display:none!important}
+.clp{max-height:1500px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 85%,transparent);mask-image:linear-gradient(#000 85%,transparent)}.clpb{margin:6px 0 14px}
+section.fz{cursor:pointer;padding-bottom:10px}
+.fzh{display:block;width:100%;margin-top:8px;border:0;background:none;color:var(--acc);font:600 13px/1.2 inherit;text-align:left;padding:4px 0;cursor:pointer}
+section:not(.fz)>.fzh{color:var(--mute);text-align:right}
+#view{padding-bottom:110px}
 #askFab{position:fixed;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:90;width:50px;height:50px;border-radius:50%;border:0;background:var(--acc);color:#fff;box-shadow:0 10px 26px -8px rgba(255,107,26,.7);display:grid;place-items:center}
 #askFab svg{width:26px;height:26px}
 .ask{position:fixed;inset:0;z-index:92;display:none;background:rgba(0,0,0,.45)}
@@ -920,27 +930,68 @@ const ICON={
  treinos:'<path d="M3 10v4M6 7v10M18 7v10M21 10v4M6 12h12"/>',
  lca:'<path d="M9 2v6l-2 6 2 8M15 2v6l2 6-2 8"/><circle cx="12" cy="13" r="2.5"/>',
  metas:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+ progresso:'<path d="M3 20h18M5 16l4-5 4 3 6-8"/><path d="M15 6h4v4"/>',
+ plano:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
  analise:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M8 11l2.5 2.5L16 8M8 17h8"/>'};
-const TABN={inicio:'Início',treinos:'Treinos',lca:'LCA',metas:'Metas',analise:'Análise',evolucao:'Evolução'};
+const TABN={inicio:'Hoje',treinos:'Medir',progresso:'Progresso',plano:'Plano'};
+const TABOF={analise:'progresso',evolucao:'progresso',progresso:'progresso',lca:'plano',metas:'plano',plano:'plano'};
 function drawTabs(cur){const nr=k=>k==='inicio'?frqRed():0;$('#tabs').innerHTML=Object.keys(TABN).map(k=>`<button class="${cur===k?'on':''}" data-go="#${k}" style="position:relative">${nr(k)?`<span style="position:absolute;top:2px;right:calc(50% - 22px);min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:#fff;font:700 11px/18px sans-serif;padding:0 4px">${nr(k)}</span>`:''}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>${TABN[k]}</button>`).join('')}
 function route(){
  const h=(location.hash||'#inicio').slice(1);
  if(!LV){if(PG.length>1&&PG[PG.length-2]===h)PG.pop();else if(PG[PG.length-1]!==h)PG.push(h)}
- const v=$('#view');window.scrollTo(0,0);AXL=null;
+ const v=$('#view');v.dataset.fold='';window.scrollTo(0,0);AXL=null;
  $('#profChip').innerHTML=`${avatar(realProf(),26)}${esc(realProf().nome)}`;$('#profChip').style.paddingLeft='4px';
  drawSnd();
  if(h.startsWith('t-')){const [id,q]=h.slice(2).split('?');const Q=new URLSearchParams(q||'');const fc=Q.get('c');if(T[id]){drawTabs('');viewTest(v,T[id],CAPS[fc]?fc:null,Q.get('tab')||'res');return}}
  if(h.startsWith('estudo-')){drawTabs('');viewStudy(v,h.slice(7));return}
  if(h.startsWith('melhorar-')){drawTabs('');viewMelh(v,h.slice(9));return}
  if(h.startsWith('reg-')&&GROUPS[h.slice(4)]){drawTabs('treinos');const g=h.slice(4);if(viewReg._g!==g){viewReg._g=g;RTAB='res'}viewReg(v,g);return}
- if(h.startsWith('cap-')&&CAPS[h.slice(4)]){drawTabs('treinos');viewCap(v,h.slice(4));return}
- const VIEWS={hw:viewHW,ciencia:viewCiencia,inicio:viewHome,corpo:viewBody,treinos:viewTrain,lca:viewLCA,metas:viewGoals,analise:viewAnalysis,evolucao:viewEvo,perfil:viewProf};
- const k=VIEWS[h]?h:'inicio';drawTabs(k);
- v.style.animation='none';void v.offsetWidth;v.style.animation='';VIEWS[k](v);
+ if(h.startsWith('cap-')&&CAPS[h.slice(4)]){drawTabs('treinos');v.dataset.fold='cap|2';viewCap(v,h.slice(4));return}
+ const VIEWS={hw:viewHW,ciencia:viewCiencia,inicio:viewHome,corpo:viewBody,treinos:viewTrain,lca:viewLCA,metas:viewGoals,analise:viewAnalysis,evolucao:viewEvo,perfil:viewProf,progresso:null,plano:null};
+ let k=VIEWS[h]!==undefined?h:'inicio';
+ if(k==='progresso')k=PAIRS.progresso.last();if(k==='plano')k=PAIRS.plano.last();
+ drawTabs(TABOF[k]||k);
+ v.style.animation='none';void v.offsetWidth;v.style.animation='';
+ if(TABOF[k]&&k!=='progresso'&&k!=='plano'){viewPair(v,TABOF[k],k,VIEWS[k]);return}
+ v.dataset.fold=FOLDK[k]!=null?k+'|'+FOLDK[k]:'';VIEWS[k](v);
 }
 addEventListener('hashchange',route);
+/* Progresso = Análise + Evolução · Plano = LCA + Objetivos (nada foi removido: só agrupado) */
+const PAIRS={
+ progresso:{subs:[['analise','Capacidades','o que está forte e o que melhorar'],['evolucao','Gráficos','evolução no tempo']],last:()=>{try{const x=localStorage.getItem('ardulab_sub_progresso');return x==='evolucao'?'evolucao':'analise'}catch(e){return 'analise'}}},
+ plano:{subs:[['lca','Reabilitação LCA','plano do dia, fases e critérios'],['metas','Objetivos e metas','o que medir e metas']],last:()=>{try{const x=localStorage.getItem('ardulab_sub_plano');if(x==='lca'||x==='metas')return x}catch(e){}return prof().op?'lca':'metas'}}};
+const FOLDK={inicio:2,treinos:2,analise:3,evolucao:1,lca:0};
+function viewPair(v,tab,sub,fn){try{localStorage.setItem('ardulab_sub_'+tab,sub)}catch(e){}
+ v.dataset.fold='';v.innerHTML=`<div class="seg" role="tablist">${PAIRS[tab].subs.map(([k,n,d])=>`<button data-go="#${k}" class="${k===sub?'on':''}" role="tab"><b>${n}</b><small>${d}</small></button>`).join('')}</div><div id="pairBody"></div>`;
+ const b=$('#pairBody');b.dataset.fold=FOLDK[sub]!=null?sub+'|'+FOLDK[sub]:'';fn(b)}
+/* Recolher: as seções secundárias ficam fechadas (só o título) e abrem com um toque; o app lembra o que você abriu */
+const FOLD=(()=>{try{return JSON.parse(localStorage.getItem('ardulab_fold')||'{}')}catch(e){return {}}})();
+function foldSave(){try{localStorage.setItem('ardulab_fold',JSON.stringify(FOLD))}catch(e){}}
+function clampRun(c){[...c.children].forEach(e=>{if(e.dataset.clp||e.dataset.nofold!=null||e.classList.contains('fz'))return;const H=e.getBoundingClientRect().height;if(H<2400)return;e.dataset.clp=1;
+  e.classList.add('clp');const b=document.createElement('button');b.type='button';b.className='btn ghost w clpb';const set=o=>{e.classList.toggle('clp',!o);b.textContent=o?'Mostrar menos ▴':'Mostrar tudo ▾ (lista continua)'};set(false);
+  b.onclick=()=>{const o=e.classList.contains('clp');set(o);if(!o)e.scrollIntoView({block:'start'})};e.after(b)})}
+function foldRun(c){const [page,kk]=(c.dataset.fold||'').split('|');if(!page)return;const keep=+kk||0;let n=0;setTimeout(()=>clampRun(c),60);
+ [...c.children].forEach(s=>{if(s.tagName!=='SECTION'||s.dataset.nofold!=null)return;const h=s.querySelector('h2,h3');if(!h)return;
+  let hc=h;while(hc.parentElement&&hc.parentElement!==s)hc=hc.parentElement;if(hc.parentElement!==s)return;
+  const i=n++;if(i<keep||s.dataset.fzd)return;s.dataset.fzd=1;
+  const kids=[...s.children],hi=kids.indexOf(hc);kids.slice(0,hi+1).forEach(k=>k.classList.add('fzk'));kids.filter(k=>k.matches('button.btn:not(.ghost)')).forEach(k=>k.classList.add('fzk'));
+  const key=page+'|'+h.textContent.trim().slice(0,40),hint=document.createElement('button');hint.type='button';hint.className='fzh';s.appendChild(hint);
+  const set=o=>{s.classList.toggle('fz',!o);hint.textContent=o?'Recolher ▴':'Abrir ▾'};set(!!FOLD[key]);
+  hint.onclick=e=>{e.stopPropagation();e.preventDefault();const o=s.classList.contains('fz');set(o);FOLD[key]=o;foldSave()};
+  s.addEventListener('click',e=>{if(!s.classList.contains('fz')||e.target.closest('.fzh'))return;const it=e.target.closest('button,a,input,select,label,summary,[data-go]');if(it&&it!==s&&s.contains(it))return;e.preventDefault();e.stopPropagation();set(true);FOLD[key]=true;foldSave()},true)})}
+new MutationObserver(()=>{document.querySelectorAll('#view[data-fold],#view [data-fold]').forEach(c=>{if(c.dataset.fold)foldRun(c)})}).observe(document.getElementById('view'),{childList:true,subtree:true});
 
 /* ---------- INÍCIO ---------- */
+function demoBanner(){try{const all=Object.values(S.tr).flat(),dm=all.filter(r=>r.demo).length;if(!dm||all.length-dm>0)return '';
+ return `<section class="card" data-nofold style="border:2px dashed #2fa3ff"><b style="color:#2fa3ff">Você está vendo dados de exemplo</b><p class="small" style="margin:4px 0 8px">Os ${dm} testes desta tela são de demonstração. Quando o aparelho chegar, apague os exemplos e comece com os seus dados (seu perfil e configurações ficam).</p><button class="btn ghost w" id="demoGo">Começar com meus dados</button></section>`}catch(e){return ''}}
+function todayCard(){try{const p=prof(),F=typeof frqItems==='function'?frqItems().map(x=>frqStat(x.id)).filter(Boolean):[],fd=F.filter(x=>x.k===0).length,fr=F.filter(x=>x.k===2).length;
+ let lca='';if(p.op){const st=lcaStage(),D=lcaToday(st),sd=D.steps.filter(x=>x.done).length;
+  lca=`<button class="li" data-go="#lca" style="grid-template-columns:auto 1fr auto;border-left:4px solid ${D.hot?'var(--bad)':sd===D.steps.length&&D.dd.length===D.ex.length?'var(--good)':'var(--acc)'}"><span style="font-size:22px">🦵</span><span><span class="t">Plano do joelho${D.hot?' · dia leve':''}</span><br><span class="s">${sd}/${D.steps.length} passos · ${D.dd.length}/${D.ex.length} exercícios feitos hoje</span></span><span class="r" style="color:var(--acc)">abrir ›</span></button>`}
+ let due=0;try{due=measItems().filter(x=>x.days&&x.st==='late').length}catch(e){}
+ return `<section class="card" data-nofold><h2 style="margin:0 0 8px">Seu dia</h2><div class="list">${lca}
+  <button class="li" data-go="#treinos" style="grid-template-columns:auto 1fr auto;border-left:4px solid ${fr?'var(--bad)':fd===F.length&&F.length?'var(--good)':'var(--warn)'}"><span style="font-size:22px">📏</span><span><span class="t">Medições</span><br><span class="s">${F.length?`${fd} de ${F.length} frequentes feitas hoje${fr?` · <b style="color:var(--bad)">${fr} atrasada${fr>1?'s':''}</b>`:''}`:'Escolha um teste para medir'}${due?` · agenda: <b style="color:var(--bad)">${due} atrasada${due>1?'s':''}</b>`:''}</span></span><span class="r" style="color:var(--acc)">medir ›</span></button>
+  <button class="li" data-go="#progresso" style="grid-template-columns:auto 1fr auto"><span style="font-size:22px">📈</span><span><span class="t">Seu progresso</span><br><span class="s">capacidades, o que melhorar e gráficos</span></span><span class="r" style="color:var(--acc)">ver ›</span></button>
+ </div></section>`}catch(e){return ''}}
 let editPins=false;
 function viewHome(v){
  const p=prof(),idx=METRICS.idx.f();
@@ -954,6 +1005,8 @@ function viewHome(v){
    <p class="mute" style="margin:6px 0 8px">Sua força geral está acima de <b style="color:var(--ink)">${fmt(idx||0,0)}%</b> das pessoas de ${p.peso} kg, ${p.idade} anos e ${p.altura} cm.</p>
    <span class="tag">${esc(p.esporte)}</span> ${p.op?`<span class="tag" style="color:var(--sideE)">LCA ${sideName(p.op).toLowerCase()}${p.cir&&!isNaN(new Date(p.cir))?` · semana ${Math.max(0,Math.floor((Date.now()-new Date(p.cir))/7/DAY))}`:''}</span>`:''}</div>
  </section>
+ ${demoBanner()}
+ ${todayCard()}
  ${frqCard()}
  ${alertsCard(3)}
  ${agendaCard()}
@@ -967,7 +1020,7 @@ function viewHome(v){
  <section class="card"><div class="row sb"><h2 style="margin:0" class="gl" data-g="radar">Equilíbrio do corpo</h2><span class="note">50 = média de referência</span></div><div class="chart" style="height:300px"><svg id="radar" viewBox="0 0 300 300"></svg></div></section>
  <section class="card"><h2>Testes rápidos</h2><div class="list">${['kext','sher','habd','pflex'].map(id=>testRow(T[id])).join('')}</div></section>
  <p class="note">Faixas de referência são estimativas provisórias por peso, idade, sexo e altura, para demonstração. Serão trocadas por tabelas publicadas antes do uso real. Todos os dados desta tela são simulados.</p>`;
- drawPins();hydrateMini(v);wireAlerts(v);wireAgenda(v);wireDays(v);wireCal(v);
+ drawPins();hydrateMini(v);wireAlerts(v);wireAgenda(v);wireDays(v);wireCal(v);{const dg=$('#demoGo');if(dg)dg.onclick=()=>{navTo('#perfil');setTimeout(()=>{const b=$('#demoDel');if(b){b.scrollIntoView({block:'center'});b.click()}},350)}}
  requestAnimationFrame(()=>{const a=$('#ringArc');if(a)a.style.strokeDashoffset=C*(1-(idx||0)/100)});
  countUp(v);
  drawRadar(groups);
@@ -2477,7 +2530,7 @@ function viewLCA(v){
   return `<button class="card critc" data-crit="${c.k}" style="border-left:5px solid ${col}">${ringP(c.v==null?0:prog,col,58,c.ok?'✓':c.v==null?'?':Math.round(prog)+'%')}<span style="flex:1;text-align:left"><b>${c.n}</b><br><span class="small">${c.v==null?'<span class="mute">Ainda não medido</span>':`<b style="color:${col}">${fmt(c.v,c.d)}${c.u}</b> <span class="mute">· meta ${c.down?'≤':'≥'} ${fmt(c.t,c.d)}${c.u}</span>`}</span>${c.when?`<br><span class="small" style="color:${c.when.includes('hoje')?'var(--good)':'var(--mute)'}">🕒 ${c.when}</span>`:''}<br><span class="small mute">${c.txt}</span></span><span class="chip" style="flex:none">${c.v==null?'Medir':'Medir de novo'}</span></button>`}).join('')}</div>
   <div class="legend small" style="margin-top:8px"><span><i style="background:var(--good)"></i>✓ meta atingida</span><span><i style="background:var(--warn)"></i>medido, mas abaixo da meta</span><span><i style="background:var(--mute)"></i>ainda não medido</span></div>
   <p class="note">Critérios comuns em protocolos de retorno ao esporte após LCA. A decisão final é sua junto com o fisioterapeuta e o médico. Referências provisórias.</p></section>
- <section class="card" id="kneeBox"><h2 style="margin:0 0 4px">Joelho hoje</h2><p class="small mute" style="margin:0 0 10px">Registre a dor e o inchaço todo dia. Isso entra nos critérios e no gráfico.</p>
+ <section class="card" id="kneeBox" data-nofold><h2 style="margin:0 0 4px">Joelho hoje</h2><p class="small mute" style="margin:0 0 10px">Registre a dor e o inchaço todo dia. Isso entra nos critérios e no gráfico.</p>
   <div class="row sb"><span>Dor agora (0 a 10)</span><b id="dorV" style="font:700 28px 'Barlow Condensed',sans-serif">${today?today.dor:0}</b></div>
   <input type="range" min="0" max="10" step="1" value="${today?today.dor:0}" id="dorIn" style="width:100%;accent-color:var(--acc)">
   <div class="row" style="gap:8px;margin-top:8px"><span>Inchaço?</span><button class="chip ${today&&today.inc?'':'on'}" data-inc="0">Não</button><button class="chip ${today&&today.inc?'on':''}" data-inc="1">Sim</button><button class="btn" id="kneeSave" style="margin-left:auto;min-height:40px">Salvar</button></div>
@@ -2566,16 +2619,16 @@ function lcaCoach(){const p=prof();if(!p.op)return '';const st=lcaStage(),{C,fre
  const head=st.k==='pre'?`<b>Pré-operatório</b>${st.dias!=null?` · cirurgia em <b>${st.dias} dia${st.dias>1?'s':''}</b>`:' · cirurgia ainda sem data'}${st.les!=null?` · ${st.les} semana${st.les===1?'':'s'} desde a lesão`:''}`:st.k==='cons'?'<b>Tratamento sem cirurgia</b>':`<b>Pós-operatório</b> · semana ${Math.floor(st.w)}`;
  const preMs=['ext0','calmo','flex120','q80'],pre=st.k==='pre'?preMs.filter(k=>S.lcaMs[k]).length:0;
  const fr=fresh.map(k=>LMS.find(m=>m[0]===k)).filter(Boolean);
- return `${fr.map(m=>`<section class="card" style="border:2px solid var(--good);background:color-mix(in srgb,var(--good) 10%,var(--card))"><span class="tag" style="color:var(--good)">🎉 Marco atingido</span><h2 style="margin:6px 0 4px">${m[1]}</h2><p style="margin:0 0 6px"><b>Por que isso importa:</b> ${m[3]}</p><p style="margin:0"><b>Próximo passo:</b> ${m[4]}</p></section>`).join('')}
- <section class="card" style="border:2px solid var(--acc)"><span class="tag" style="color:var(--acc)">Seu acompanhamento</span><p style="margin:6px 0 10px">${head} · joelho ${sideName(p.op).toLowerCase()}</p>
+ return `<section class="card" data-nofold style="border:2px solid var(--acc)"><span class="tag" style="color:var(--acc)">Seu acompanhamento</span><p style="margin:6px 0 10px">${head} · joelho ${sideName(p.op).toLowerCase()}</p>
+ ${fr.length?`<div style="border:2px solid var(--good);border-radius:12px;padding:8px 10px;margin:0 0 10px;background:color-mix(in srgb,var(--good) 10%,var(--card))">${fr.map(m=>`<details><summary style="cursor:pointer;min-height:28px"><b style="color:var(--good)">🎉 Marco atingido:</b> ${m[1]}</summary><p class="small" style="margin:4px 0"><b>Por que importa:</b> ${m[3]}</p><p class="small" style="margin:0 0 4px"><b>Próximo passo:</b> ${m[4]}</p></details>`).join('')}</div>`:''}
  ${D.hot?`<div class="savedok" style="background:color-mix(in srgb,var(--bad) 12%,var(--card));border-color:var(--bad)"><span style="font-size:22px">⚠️</span><div><b>Hoje é dia leve.</b> Você registrou dor alta ou inchaço. Faça só mobilidade, gelo e isometria leve. Se o inchaço durar mais de 48 h ou o joelho travar/falsear, procure o fisioterapeuta ou o médico.</div></div>`:''}
- <h3 style="margin:4px 0 6px">O que eu vejo nos seus números</h3>
- ${doc.map(([ic,t,x])=>{const mk={'Extensão':'rom','Força do quadríceps':'quad','Posteriores':'iq','Aterrissagem':'aterr'}[t];return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="font-size:16px;flex:0 0 22px;line-height:1.4">${ic}</span><span class="small" style="flex:1;min-width:0"><b>${t}:</b> ${x}${mk&&ic!=='✅'?` <button class="chip" data-melh="${mk}" style="min-height:26px;padding:2px 8px;font-size:12px;margin-top:4px">Como melhorar ›</button>`:''}</span></div>`}).join('')}
- <h3 style="margin:12px 0 6px">Seu plano de hoje</h3>
+ <h3 style="margin:4px 0 6px">Seu plano de hoje</h3>
  <div class="list">${D.steps.map((s,i)=>`<button class="li" data-cstep="${i}" style="grid-template-columns:28px 1fr auto;border-left:4px solid ${s.done?'var(--good)':'var(--acc)'}"><span style="font-size:20px">${s.done?'✅':i+1+'.'}</span><span><span class="t">${s.n}</span><br><span class="s">${s.s}</span></span><span class="mute">${s.done?'feito':'fazer ›'}</span></button>`).join('')}</div>
  <h4 style="margin:12px 0 4px">Exercícios do dia ${D.hot?'(versão leve)':''}</h4><div style="display:grid;gap:4px">${D.ex.map((e,i)=>{const xi=exId(e[0]);return `<div class="row" style="gap:10px;padding:6px 8px;border-radius:10px;background:var(--card2);align-items:center"><label style="display:flex;align-items:center;padding:6px;cursor:pointer"><input type="checkbox" data-cex="${i}" ${D.dd.includes(i)?'checked':''} style="width:22px;height:22px;accent-color:var(--good)"></label><${xi?`button data-exid="${xi}" data-dose="${esc(e[1])}"`:'div'} style="flex:1;display:flex;gap:8px;align-items:center;text-align:left;background:none;border:0;color:inherit;padding:4px 0;font:inherit;cursor:${xi?'pointer':'default'}"><span style="flex:1"><span class="small" style="display:block">${e[0]}</span><b class="small" style="color:var(--acc)">${e[1]}</b></span>${xi?'<span class="small" style="white-space:nowrap;color:var(--acc)">Como fazer ›</span>':''}</${xi?'button':'div'}></div>`}).join('')}</div><p class="small mute" style="margin:6px 0 0">Toque no nome de um exercício para ver o passo a passo completo; marque o quadradinho quando terminar.</p>
  <p class="small" id="cexN" style="margin:8px 0 0">${D.dd.length}/${D.ex.length} feitos hoje.</p>
  <p class="small" style="margin:8px 0 0"><b style="color:var(--bad)">Evite hoje:</b> ${D.evita}</p>
+ <h3 style="margin:14px 0 6px">O que eu vejo nos seus números</h3>
+ ${doc.map(([ic,t,x])=>{const mk={'Extensão':'rom','Força do quadríceps':'quad','Posteriores':'iq','Aterrissagem':'aterr'}[t];return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="font-size:16px;flex:0 0 22px;line-height:1.4">${ic}</span><span class="small" style="flex:1;min-width:0"><b>${t}:</b> ${x}${mk&&ic!=='✅'?` <button class="chip" data-melh="${mk}" style="min-height:26px;padding:2px 8px;font-size:12px;margin-top:4px">Como melhorar ›</button>`:''}</span></div>`}).join('')}
  ${st.k==='pre'?`<h3 style="margin:12px 0 6px">Pronto para a cirurgia? (${pre}/${preMs.length})</h3><div style="display:grid;gap:4px">${preMs.map(k=>{const m=LMS.find(x=>x[0]===k),ok=S.lcaMs[k];return `<div class="row small" style="gap:8px"><span>${ok?'✅':'⬜'}</span><span style="flex:1">${m[1]}</span>${ok?`<span class="mute">${dFmt(ok)}</span>`:''}</div>`}).join('')}</div><p class="note" style="margin:6px 0 0">Metas comuns de "pré-reabilitação": joelho esticando, sem inchaço, boa flexão e quadríceps forte. Confirme com o seu cirurgião.</p>`:''}
  <details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:700;min-height:30px">Todos os marcos (${Object.keys(S.lcaMs).length}/${LMS.length})</summary>${LMS.map(([k,n,,w])=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><div class="row small" style="gap:8px"><span>${S.lcaMs[k]?'✅':'⬜'}</span><b style="flex:1">${n}</b>${S.lcaMs[k]?`<span class="mute">${dFmt(S.lcaMs[k])}</span>`:''}</div><p class="small mute" style="margin:2px 0 0 24px">${w}</p></div>`).join('')}</details>
  <p class="note" style="margin:10px 0 0">Este acompanhamento organiza os seus dados com base em protocolos e estudos publicados, mas não substitui o seu fisioterapeuta e o seu médico: siga sempre o que eles liberarem.</p></section>`}
@@ -2610,7 +2663,7 @@ function frqCard(){const F=frqCfg(),col={good:'var(--good)',warn:'var(--warn)',b
  <p class="small mute" style="margin:4px 0 6px">Escolhidos pelo app: os testes que você mais faz (último mês).</p>
  <div class="row sb small" style="margin:0 0 8px"><span><b style="color:var(--good)">${ok}</b> de ${L.length} feitos hoje</span>${nr?`<b style="color:var(--bad)">${nr} atrasado${nr>1?'s':''}</b>`:'<span class="mute">nenhum atrasado</span>'}</div>
  <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:8px">${L.map(x=>`<i style="flex:1;background:${col[x.st.c]};margin-right:2px"></i>`).join('')}</div>
- ${L.map(x=>`<button class="li" data-frq="${x.id}" style="grid-template-columns:auto 1fr auto;border-left:4px solid ${col[x.st.c]}"><span style="width:14px;height:14px;border-radius:7px;background:${col[x.st.c]};display:block"></span><span><span class="t">${x.st.I.n}</span><br><span class="s" style="color:${col[x.st.c]}">${x.st.txt}</span><br><span class="small mute">você mede em ${x.dias} dos últimos 30 dias (~${fmt(x.dias/30*7,1)} por semana) · ${fmt(x.rel,0)}% das suas medições</span></span><span class="r" style="font-size:13px;color:var(--acc)">${x.st.k===0?'ver':'medir'} ›</span></button>`).join('')}
+ ${L.map(x=>`<button class="li" data-frq="${x.id}" style="grid-template-columns:auto 1fr auto;border-left:4px solid ${col[x.st.c]};padding-top:8px;padding-bottom:8px;min-height:0"><span style="width:14px;height:14px;border-radius:7px;background:${col[x.st.c]};display:block"></span><span style="min-width:0"><span class="t">${x.st.I.n}</span><br><span class="small"><b style="color:${col[x.st.c]}">${x.st.txt}</b> <span class="mute">· ${x.dias} dias no mês (~${fmt(x.dias/30*7,1)}/sem.) · ${fmt(x.rel,0)}%</span></span></span><span class="r" style="font-size:13px;color:var(--acc)">${x.st.k===0?'ver':'medir'} ›</span></button>`).join('')}
  </section>`}
 function frqGo(id){if(id.startsWith('imu:')){openImu(id.slice(4));return}const st=frqStat(id);navTo('#t-'+id+(st&&st.k===0?'':'?tab=medir'))}
 function frqToggle(id){const F=frqCfg();F.items=F.items||[];const i=F.items.indexOf(id);if(i>=0)F.items.splice(i,1);else F.items.push(id);frqCfg().upd=Date.now();save();return i<0}
